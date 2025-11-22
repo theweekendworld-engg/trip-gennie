@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import FilterPanel from '../../components/ui/FilterPanel';
 import TripCard from '../../components/ui/TripCard';
 import ThemeToggle from '../../components/ui/ThemeToggle';
+import CitySelector from '../../components/ui/CitySelector';
 import { SearchFilters, TripResult } from '../../types';
 import { CITIES } from '../../lib/constants';
 
 export default function CityPage() {
     const params = useParams();
+    const router = useRouter();
     const citySlug = params.city as string;
     const city = CITIES.find(c => c.slug === citySlug);
 
@@ -22,9 +24,16 @@ export default function CityPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const handleCityChange = (newCityId: number) => {
+        const newCity = CITIES.find(c => c.id === newCityId);
+        if (newCity) {
+            router.push(`/${newCity.slug}`);
+        }
+    };
+
     const searchTrips = useCallback(async () => {
         if (!filters.cityId) return;
-        
+
         setLoading(true);
         setError(null);
 
@@ -81,8 +90,8 @@ export default function CityPage() {
         );
     }
 
-        return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-950">
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-950">
             {/* Header */}
             <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
                 <div className="container-custom py-4">
@@ -92,9 +101,12 @@ export default function CityPage() {
                             <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
                         </a>
                         <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <div className="text-sm text-muted-foreground">Exploring from</div>
-                                <div className="font-semibold text-lg text-foreground">{city.name}</div>
+                            <div className="w-72">
+                                <CitySelector
+                                    selectedCity={city.id}
+                                    onCitySelect={handleCityChange}
+                                    label="Exploring from"
+                                />
                             </div>
                             <ThemeToggle />
                         </div>

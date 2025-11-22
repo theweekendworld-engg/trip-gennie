@@ -8,9 +8,10 @@ interface CitySelectorProps {
     selectedCity?: number;
     onCitySelect: (cityId: number) => void;
     className?: string;
+    label?: string;
 }
 
-export default function CitySelector({ selectedCity, onCitySelect, className }: CitySelectorProps) {
+export default function CitySelector({ selectedCity, onCitySelect, className, label = 'Starting from' }: CitySelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     const selected = CITIES.find(c => c.id === selectedCity);
@@ -24,8 +25,8 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                     'px-6 py-4 rounded-xl border-2 transition-all duration-200',
                     'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700',
                     'text-foreground',
-                    isOpen 
-                        ? 'border-primary-500 dark:border-primary-400 ring-4 ring-primary-100 dark:ring-primary-900/30' 
+                    isOpen
+                        ? 'border-primary-500 dark:border-primary-400 ring-4 ring-primary-100 dark:ring-primary-900/30'
                         : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-500'
                 )}
             >
@@ -34,7 +35,7 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                         {selected ? selected.name[0] : '?'}
                     </div>
                     <div className="text-left">
-                        <div className="text-xs text-muted-foreground font-medium">Starting from</div>
+                        <div className="text-xs text-muted-foreground font-medium">{label}</div>
                         <div className="text-lg font-semibold text-foreground">
                             {selected ? selected.name : 'Select your city'}
                         </div>
