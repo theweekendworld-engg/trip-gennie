@@ -1,0 +1,245 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 1. Cities (Origin points)
+model City {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  slug      String   @unique @db.VarChar(100)
+  state     String   @db.VarChar(100)
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cityDestinations CityDestination[]
+  seoPages         SeoPage[]
+  searchLogs       SearchLog[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("cities")
+}
+
+// 2. Destinations (Trip locations)
+model Destination {
+  id                 Int      @id @default(autoincrement())
+  name               String   @db.VarChar(200)
+  slug               String   @unique @db.VarChar(200)
+  latitude           Decimal  @db.Decimal(10, 8)
+  longitude          Decimal  @db.Decimal(11, 8)
+  category           String   @db.VarChar(50)
+  shortSummary       String   @map("short_summary") @db.Text
+  aiEnhancedSummary  String?  @map("ai_enhanced_summary") @db.Text
+  bestMonths         String?  @map("best_months") @db.VarChar(100)
+  imageUrl           String?  @map("image_url") @db.VarChar(500)
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  cityDestinations   CityDestination[]
+  nearbyAttractions  NearbyAttraction[]
+  destinationPhotos  DestinationPhoto[]
+
+  @@index([slug])
+  @@index([category])
+  @@index([isActive])
+  @@map("destinations")
+}
+
+// 3. City-Destination Relationships
+model CityDestination {
+  id                     Int      @id @default(autoincrement())
+  cityId                 Int      @map("city_id")
+  destinationId          Int      @map("destination_id")
+  distanceKm             Int      @map("distance_km")
+  travelTimeMinutes      Int      @map("travel_time_minutes")
+  transportMode          String   @map("transport_mode") @db.VarChar(20)
+  estimatedFuelCost      Int?     @map("estimated_fuel_cost")
+  estimatedTransportCost Int?     @map("estimated_transport_cost")
+  routeQuality           String?  @map("route_quality") @db.VarChar(20)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  city        City        @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, destinationId, transportMode])
+  @@index([cityId])
+  @@index([destinationId])
+  @@index([distanceKm])
+  @@index([travelTimeMinutes])
+  @@index([transportMode])
+  @@map("city_destinations")
+}
+
+// 4. Nearby Attractions
+model NearbyAttraction {
+  id            Int         @id @default(autoincrement())
+  destinationId Int         @map("destination_id")
+  name          String      @db.VarChar(200)
+  distanceKm    Int         @map("distance_km")
+  category      String?     @db.VarChar(50)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@map("nearby_attractions")
+}
+
+// 5. Anonymous User Sessions
+model UserSession {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fingerprintHash String     @map("fingerprint_hash") @db.VarChar(64)
+  firstSeen       DateTime   @default(now()) @map("first_seen")
+  lastSeen        DateTime   @default(now()) @map("last_seen")
+  totalSearches   Int        @default(0) @map("total_searches")
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  searchLogs SearchLog[]
+
+  @@index([fingerprintHash])
+  @@index([lastSeen])
+  @@map("user_sessions")
+}
+
+// 6. Search Analytics
+model SearchLog {
+  id          BigInt   @id @default(autoincrement())
+  sessionId   String?  @map("session_id") @db.Uuid
+  cityId      Int?     @map("city_id")
+  filters     Json?
+  resultCount Int?     @map("result_count")
+  searchedAt  DateTime @default(now()) @map("searched_at")
+
+  session UserSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  city    City?        @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([cityId])
+  @@index([searchedAt])
+  @@map("search_logs")
+}
+
+// 7. SEO Pages
+model SeoPage {
+  id               Int      @id @default(autoincrement())
+  slug             String   @unique @db.VarChar(300)
+  cityId           Int?     @map("city_id")
+  pageType         String   @map("page_type") @db.VarChar(50)
+  metaTitle        String   @map("meta_title") @db.VarChar(200)
+  metaDescription  String   @map("meta_description") @db.Text
+  aiIntroParagraph String?  @map("ai_intro_paragraph") @db.Text
+  aiFaqJson        Json?    @map("ai_faq_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  city City? @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([cityId])
+  @@index([pageType])
+  @@map("seo_pages")
+}
+
+// 8. Rate Limiting
+model RateLimit {
+  id           Int      @id @default(autoincrement())
+  identifier   String   @db.VarChar(100)
+  endpoint     String   @db.VarChar(100)
+  requestCount Int      @default(1) @map("request_count")
+  windowStart  DateTime @default(now()) @map("window_start")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([identifier, endpoint, windowStart])
+  @@index([identifier, endpoint])
+  @@index([windowStart])
+  @@map("rate_limits")
+}
+
+// 9. API Cache
+model ApiCache {
+  id            Int       @id @default(autoincrement())
+  apiName       String    @map("api_name") @db.VarChar(50)
+  cacheKey      String    @map("cache_key") @db.VarChar(500)
+  requestParams Json      @map("request_params")
+  responseData  Json      @map("response_data")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  expiresAt     DateTime? @map("expires_at")
+  lastValidated DateTime? @map("last_validated")
+
+  @@unique([apiName, cacheKey])
+  @@index([apiName, cacheKey])
+  @@index([expiresAt])
+  @@map("api_cache")
+}
+
+// 10. Destination Photos
+model DestinationPhoto {
+  id             Int      @id @default(autoincrement())
+  destinationId  Int      @map("destination_id")
+  photoReference String   @map("photo_reference") @db.VarChar(500)
+  photoUrl       String?  @map("photo_url") @db.VarChar(500)
+  width          Int?
+  height         Int?
+  attribution    String?  @db.Text
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@index([destinationId, isPrimary])
+  @@map("destination_photos")
+}
+
+// 11. Distance Matrix Cache
+model DistanceMatrixCache {
+  id             Int      @id @default(autoincrement())
+  originLat      Decimal  @map("origin_lat") @db.Decimal(10, 8)
+  originLng      Decimal  @map("origin_lng") @db.Decimal(11, 8)
+  destinationLat Decimal  @map("destination_lat") @db.Decimal(10, 8)
+  destinationLng Decimal  @map("destination_lng") @db.Decimal(11, 8)
+  transportMode  String   @map("transport_mode") @db.VarChar(20)
+  distanceMeters Int      @map("distance_meters")
+  durationSeconds Int     @map("duration_seconds")
+  distanceText   String?  @map("distance_text") @db.VarChar(50)
+  durationText   String?  @map("duration_text") @db.VarChar(50)
+  routePolyline  String?  @map("route_polyline") @db.Text
+  cachedAt       DateTime @default(now()) @map("cached_at")
+
+  @@unique([originLat, originLng, destinationLat, destinationLng, transportMode])
+  @@index([originLat, originLng])
+  @@index([destinationLat, destinationLng])
+  @@map("distance_matrix_cache")
+}
+
+// 12. Places Cache
+model PlacesCache {
+  id                Int      @id @default(autoincrement())
+  placeId           String   @unique @map("place_id") @db.VarChar(200)
+  name              String?  @db.VarChar(200)
+  formattedAddress  String?  @map("formatted_address") @db.Text
+  rating            Decimal? @db.Decimal(2, 1)
+  userRatingsTotal  Int?     @map("user_ratings_total")
+  types             Json?
+  openingHours      Json?    @map("opening_hours")
+  website           String?  @db.VarChar(500)
+  phoneNumber       String?  @map("phone_number") @db.VarChar(50)
+  reviews           Json?
+  fullResponse      Json     @map("full_response")
+  cachedAt          DateTime @default(now()) @map("cached_at")
+  lastUpdated       DateTime @default(now()) @updatedAt @map("last_updated")
+
+  @@index([placeId])
+  @@map("places_cache")
+}
