@@ -225,4 +225,4 @@ MIT License - feel free to use this project for your own purposes.
 
 ---
 
-Made with ❤️ by TripGenie
+Made with ❤️ by TheWeekendWorld

@@ -2,9 +2,9 @@ import type { Config } from "tailwindcss";
 
 export default {
     content: [
-        "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-        "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-        "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+        "./app/**/*.{js,ts,jsx,tsx,mdx}",
+        "./components/**/*.{js,ts,jsx,tsx,mdx}",
+        "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     ],
     theme: {
         extend: {
@@ -37,16 +37,16 @@ export default {
                     800: 'hsl(var(--accent-800))',
                     900: 'hsl(var(--accent-900))',
                 },
-                background: 'hsl(var(--background))',
-                foreground: 'hsl(var(--foreground))',
+                background: 'hsl(var(--background) / <alpha-value>)',
+                foreground: 'hsl(var(--foreground) / <alpha-value>)',
                 muted: {
-                    DEFAULT: 'hsl(var(--muted))',
-                    foreground: 'hsl(var(--muted-foreground))',
+                    DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+                    foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
                 },
-                border: 'hsl(var(--border))',
+                border: 'hsl(var(--border) / <alpha-value>)',
                 card: {
-                    DEFAULT: 'hsl(var(--card))',
-                    foreground: 'hsl(var(--card-foreground))',
+                    DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+                    foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
                 },
             },
             borderRadius: {

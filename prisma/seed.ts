@@ -1,7 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { CITIES, FUEL_COST_PER_KM } from '../src/lib/constants';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { CITIES, FUEL_COST_PER_KM } from '../lib/constants';
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set');
+}
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
     console.log('🌱 Starting database seed...\n');
@@ -36,8 +45,9 @@ async function main() {
             longitude: 77.6838,
             category: 'hill',
             shortSummary: 'Ancient hill fortress with stunning sunrise views, pleasant climate, and historical significance. Perfect for a quick weekend getaway.',
+            aiEnhancedSummary: 'Nandi Hills, also known as Nandidurg, is a popular weekend destination located 60km from Bengaluru. This ancient hill fortress stands at 1,478 meters above sea level and offers breathtaking panoramic views of the surrounding landscape. The hill is famous for its spectacular sunrise views, which attract thousands of visitors every weekend. With its pleasant climate, historical temples, and well-maintained gardens, Nandi Hills provides the perfect escape from city life.',
             bestMonths: 'October-February',
-            imageUrl: '/images/nandi-hills.jpg',
+            imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800&q=80',
         },
         {
             name: 'Mysore Palace',
@@ -46,8 +56,9 @@ async function main() {
             longitude: 76.6551,
             category: 'fort',
             shortSummary: 'Magnificent royal palace showcasing Indo-Saracenic architecture, rich history, and cultural heritage of Karnataka.',
+            aiEnhancedSummary: 'Mysore Palace, also known as Amba Vilas Palace, is one of India\'s most magnificent royal residences. This architectural marvel showcases a blend of Hindu, Muslim, Rajput, and Gothic styles. The palace is illuminated with nearly 100,000 light bulbs during the Dasara festival, creating a spectacular sight. Visitors can explore the opulent Durbar Hall, royal portraits, and the palace museum that houses artifacts from the Wodeyar dynasty.',
             bestMonths: 'October-March',
-            imageUrl: '/images/mysore-palace.jpg',
+            imageUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800&q=80',
         },
         {
             name: 'Coorg',
@@ -56,8 +67,9 @@ async function main() {
             longitude: 75.8069,
             category: 'hill',
             shortSummary: 'Scotland of India with lush coffee plantations, misty hills, waterfalls, and pleasant weather year-round.',
+            aiEnhancedSummary: 'Coorg, officially known as Kodagu, is often called the "Scotland of India" due to its misty hills, lush greenery, and pleasant climate. This hill station is famous for its sprawling coffee plantations, aromatic spices, and stunning natural beauty. Visitors can explore waterfalls like Abbey Falls, trek through dense forests, visit coffee estates, and experience the unique Kodava culture. The region is also home to several wildlife sanctuaries and offers excellent opportunities for adventure activities.',
             bestMonths: 'October-March',
-            imageUrl: '/images/coorg.jpg',
+            imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800&q=80',
         },
         {
             name: 'Shivanasamudra Falls',
@@ -66,8 +78,9 @@ async function main() {
             longitude: 77.1786,
             category: 'waterfall',
             shortSummary: 'Spectacular twin waterfalls on the Kaveri river, offering breathtaking views and natural beauty.',
+            aiEnhancedSummary: 'Shivanasamudra Falls is a spectacular waterfall located on the Kaveri River, creating two beautiful cascades - Gaganachukki and Barachukki. These falls are among the most powerful waterfalls in India, especially during the monsoon season. The surrounding area offers excellent viewpoints, and visitors can enjoy the thunderous sound of water crashing down the rocks. The falls are surrounded by lush greenery and provide a perfect setting for photography and nature appreciation.',
             bestMonths: 'July-February',
-            imageUrl: '/images/shivanasamudra.jpg',
+            imageUrl: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800&q=80',
         },
         {
             name: 'Skandagiri',
@@ -76,19 +89,41 @@ async function main() {
             longitude: 77.6780,
             category: 'adventure',
             shortSummary: 'Popular night trek destination with ancient fort ruins and mesmerizing sunrise views from the peak.',
+            aiEnhancedSummary: 'Skandagiri, also known as Kalavara Durga, is a popular trekking destination located 62km from Bengaluru. This hill is famous for its night treks that lead to spectacular sunrise views from the summit. The trek takes you through ancient fort ruins and offers panoramic views of the surrounding countryside. At 1,450 meters above sea level, the peak provides a challenging yet rewarding experience for adventure enthusiasts. The early morning trek is particularly popular as it allows trekkers to witness a breathtaking sunrise.',
             bestMonths: 'November-February',
-            imageUrl: '/images/skandagiri.jpg',
+            imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800&q=80',
         },
     ];
 
     for (const dest of destinations) {
-        await prisma.destination.upsert({
+        const created = await prisma.destination.upsert({
             where: { slug: dest.slug },
             update: dest,
             create: dest,
         });
+
+        // Add destination photos
+        if (dest.imageUrl) {
+            // Delete existing primary photo if any
+            await prisma.destinationPhoto.deleteMany({
+                where: {
+                    destinationId: created.id,
+                    isPrimary: true,
+                },
+            });
+
+            // Create new primary photo
+            await prisma.destinationPhoto.create({
+                data: {
+                    destinationId: created.id,
+                    photoUrl: dest.imageUrl,
+                    isPrimary: true,
+                    photoReference: `seed-${dest.slug}-primary`,
+                },
+            });
+        }
     }
-    console.log(`✅ Seeded ${destinations.length} sample destinations\n`);
+    console.log(`✅ Seeded ${destinations.length} sample destinations with images\n`);
 
     // 3. Create City-Destination relationships for Bengaluru
     console.log('🔗 Creating city-destination relationships...');

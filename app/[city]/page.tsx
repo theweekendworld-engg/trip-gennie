@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import FilterPanel from '@/components/ui/FilterPanel';
-import TripCard from '@/components/ui/TripCard';
-import { SearchFilters, TripResult } from '@/types';
-import { CITIES } from '@/lib/constants';
+import FilterPanel from '../../components/ui/FilterPanel';
+import TripCard from '../../components/ui/TripCard';
+import ThemeToggle from '../../components/ui/ThemeToggle';
+import { SearchFilters, TripResult } from '../../types';
+import { CITIES } from '../../lib/constants';
 
 export default function CityPage() {
     const params = useParams();
@@ -14,20 +15,16 @@ export default function CityPage() {
 
     const [filters, setFilters] = useState<SearchFilters>({
         cityId: city?.id || 1,
-        categories: [],
-        transportModes: [],
+        categories: undefined,
+        transportModes: undefined,
     });
     const [trips, setTrips] = useState<TripResult[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (city) {
-            searchTrips();
-        }
-    }, [city, filters]);
-
-    const searchTrips = async () => {
+    const searchTrips = useCallback(async () => {
+        if (!filters.cityId) return;
+        
         setLoading(true);
         setError(null);
 
@@ -51,7 +48,27 @@ export default function CityPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
+
+    // Reset filters when city changes
+    useEffect(() => {
+        if (city && city.id !== filters.cityId) {
+            setFilters({
+                cityId: city.id,
+                categories: undefined,
+                transportModes: undefined,
+                maxBudget: undefined,
+                maxTravelTime: undefined,
+            });
+        }
+    }, [city, filters.cityId]);
+
+    // Search trips when filters change
+    useEffect(() => {
+        if (city) {
+            searchTrips();
+        }
+    }, [city, searchTrips]);
 
     if (!city) {
         return (
@@ -64,19 +81,22 @@ export default function CityPage() {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-950">
             {/* Header */}
-            <header className="bg-white border-b sticky top-0 z-30 backdrop-blur-sm bg-white/80">
+            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
                 <div className="container-custom py-4">
                     <div className="flex items-center justify-between">
                         <a href="/" className="flex items-center gap-2">
                             <span className="text-2xl">✨</span>
-                            <span className="font-display font-bold text-xl">TripGenie</span>
+                            <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
                         </a>
-                        <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Exploring from</div>
-                            <div className="font-semibold text-lg">{city.name}</div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <div className="text-sm text-muted-foreground">Exploring from</div>
+                                <div className="font-semibold text-lg text-foreground">{city.name}</div>
+                            </div>
+                            <ThemeToggle />
                         </div>
                     </div>
                 </div>
@@ -97,18 +117,26 @@ export default function CityPage() {
                     <main className="lg:col-span-3">
                         {/* Results Header */}
                         <div className="mb-6">
-                            <h1 className="text-3xl font-bold mb-2">
-                                Weekend Trips from {city.name}
-                            </h1>
+                            <div className="flex items-center justify-between mb-2">
+                                <h1 className="text-3xl font-bold">
+                                    Weekend Trips from {city.name}
+                                </h1>
+                            </div>
                             <p className="text-muted-foreground">
-                                {loading ? 'Searching...' : `Found ${trips.length} amazing destinations`}
+                                {loading ? (
+                                    'Searching...'
+                                ) : trips.length === 0 ? (
+                                    'No trips found. Try adjusting your filters.'
+                                ) : (
+                                    `Found ${trips.length} amazing destination${trips.length === 1 ? '' : 's'}`
+                                )}
                             </p>
                         </div>
 
                         {/* Error State */}
                         {error && (
-                            <div className="card bg-red-50 border-red-200 p-6 text-center">
-                                <p className="text-red-600">{error}</p>
+                            <div className="card bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-6 text-center">
+                                <p className="text-red-600 dark:text-red-400">{error}</p>
                                 <button
                                     onClick={searchTrips}
                                     className="btn-primary mt-4"

@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { TripResult } from '@/types';
-import { formatCurrency, formatDistance, formatDuration, cn } from '@/lib/utils';
-import { CATEGORIES } from '@/lib/constants';
+import { TripResult } from '../../types';
+import { formatCurrency, formatDistance, formatDuration, cn } from '../../lib/utils';
+import { CATEGORIES } from '../../lib/constants';
 
 interface TripCardProps {
     trip: TripResult;
@@ -18,13 +18,23 @@ export default function TripCard({ trip, citySlug }: TripCardProps) {
         <Link href={`/${citySlug}/${trip.slug}`}>
             <div className="card-hover group overflow-hidden h-full">
                 {/* Image Section */}
-                <div className="relative h-56 overflow-hidden bg-gradient-to-br from-primary-100 to-accent-100">
+                <div className="relative h-56 overflow-hidden bg-gradient-to-br from-primary-100 dark:from-primary-900 to-accent-100 dark:to-accent-900">
                     {trip.imageUrl ? (
                         <Image
                             src={trip.imageUrl}
                             alt={trip.name}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            unoptimized={trip.imageUrl.includes('unsplash.com')}
+                            onError={(e) => {
+                                // Fallback to emoji if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-6xl">${category?.emoji || '🏞️'}</div>`;
+                                }
+                            }}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-6xl">
@@ -81,10 +91,10 @@ export default function TripCard({ trip, citySlug }: TripCardProps) {
                     </div>
 
                     {/* CTA */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                        <span className="text-sm font-medium text-primary-600">View Details</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-sm font-medium text-primary-600 dark:text-primary-400">View Details</span>
                         <svg
-                            className="w-5 h-5 text-primary-600 transition-transform group-hover:translate-x-1"
+                            className="w-5 h-5 text-primary-600 dark:text-primary-400 transition-transform group-hover:translate-x-1"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"

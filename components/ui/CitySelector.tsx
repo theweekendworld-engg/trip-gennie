@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { CITIES } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { CITIES } from '../../lib/constants';
+import { cn } from '../../lib/utils';
 
 interface CitySelectorProps {
     selectedCity?: number;
@@ -22,8 +22,11 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                 className={cn(
                     'w-full flex items-center justify-between gap-3',
                     'px-6 py-4 rounded-xl border-2 transition-all duration-200',
-                    'bg-white hover:bg-gray-50',
-                    isOpen ? 'border-primary-500 ring-4 ring-primary-100' : 'border-gray-200 hover:border-primary-300'
+                    'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700',
+                    'text-foreground',
+                    isOpen 
+                        ? 'border-primary-500 dark:border-primary-400 ring-4 ring-primary-100 dark:ring-primary-900/30' 
+                        : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-500'
                 )}
             >
                 <div className="flex items-center gap-3">
@@ -54,7 +57,7 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                         onClick={() => setIsOpen(false)}
                     />
                     <div className="absolute top-full left-0 right-0 mt-2 z-20 animate-slide-up">
-                        <div className="glass rounded-xl shadow-xl border overflow-hidden">
+                        <div className="glass rounded-xl shadow-xl overflow-hidden">
                             {CITIES.map((city) => (
                                 <button
                                     key={city.id}
@@ -64,15 +67,16 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                                     }}
                                     className={cn(
                                         'w-full flex items-center gap-3 px-6 py-4 transition-all duration-200',
-                                        'hover:bg-primary-50 border-b border-gray-100 last:border-0',
-                                        selectedCity === city.id && 'bg-primary-50'
+                                        'hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                                        'border-b border-gray-100 dark:border-gray-700 last:border-0',
+                                        selectedCity === city.id && 'bg-primary-50 dark:bg-primary-900/30'
                                     )}
                                 >
                                     <div className={cn(
                                         'w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg',
                                         selectedCity === city.id
                                             ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white'
-                                            : 'bg-gray-100 text-gray-600'
+                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                                     )}>
                                         {city.name[0]}
                                     </div>
@@ -81,7 +85,7 @@ export default function CitySelector({ selectedCity, onCitySelect, className }: 
                                         <div className="text-sm text-muted-foreground">{city.state}</div>
                                     </div>
                                     {selectedCity === city.id && (
-                                        <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg className="w-5 h-5 text-primary-600 dark:text-primary-400" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                         </svg>
                                     )}
