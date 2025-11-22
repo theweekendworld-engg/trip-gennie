@@ -32,23 +32,29 @@ model City {
 
 // 2. Destinations (Trip locations)
 model Destination {
-  id                 Int      @id @default(autoincrement())
-  name               String   @db.VarChar(200)
-  slug               String   @unique @db.VarChar(200)
-  latitude           Decimal  @db.Decimal(10, 8)
-  longitude          Decimal  @db.Decimal(11, 8)
-  category           String   @db.VarChar(50)
-  shortSummary       String   @map("short_summary") @db.Text
-  aiEnhancedSummary  String?  @map("ai_enhanced_summary") @db.Text
-  bestMonths         String?  @map("best_months") @db.VarChar(100)
-  imageUrl           String?  @map("image_url") @db.VarChar(500)
-  isActive           Boolean  @default(true) @map("is_active")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                Int     @id @default(autoincrement())
+  name              String  @db.VarChar(500)
+  slug              String  @unique @db.VarChar(500)
+  latitude          Decimal @db.Decimal(10, 8)
+  longitude         Decimal @db.Decimal(11, 8)
+  category          String  @db.VarChar(50)
+  shortSummary      String  @map("short_summary") @db.Text
+  aiEnhancedSummary String? @map("ai_enhanced_summary") @db.Text
+  bestMonths        String? @map("best_months") @db.VarChar(100)
+  imageUrl          String? @map("image_url") @db.Text
+  isActive          Boolean @default(true) @map("is_active")
 
-  cityDestinations   CityDestination[]
-  nearbyAttractions  NearbyAttraction[]
-  destinationPhotos  DestinationPhoto[]
+  // New fields for enhanced info
+  weatherInfo   Json? @map("weather_info") // { temp: 28, condition: "Sunny" }
+  airQuality    Json? @map("air_quality") // { aqi: 120, status: "Moderate" }
+  bestVisitTime Json? @map("best_visit_time") // Detailed monthly breakdown
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cityDestinations  CityDestination[]
+  nearbyAttractions NearbyAttraction[]
+  destinationPhotos DestinationPhoto[]
 
   @@index([slug])
   @@index([category])
@@ -72,6 +78,12 @@ model CityDestination {
   city        City        @relation(fields: [cityId], references: [id], onDelete: Cascade)
   destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
 
+  // New fields for detailed travel info
+  routePolyline  String? @map("route_polyline") @db.Text
+  majorWaypoints Json?   @map("major_waypoints") // List of major places on the route
+  fareDetails    Json?   @map("fare_details") // { bus: 50, train: 120, taxi: 800 }
+  bookingLinks   Json?   @map("booking_links") // { bus: "redbus.com/...", train: "irctc..." }
+
   @@unique([cityId, destinationId, transportMode])
   @@index([cityId])
   @@index([destinationId])
@@ -83,12 +95,12 @@ model CityDestination {
 
 // 4. Nearby Attractions
 model NearbyAttraction {
-  id            Int         @id @default(autoincrement())
-  destinationId Int         @map("destination_id")
-  name          String      @db.VarChar(200)
-  distanceKm    Int         @map("distance_km")
-  category      String?     @db.VarChar(50)
-  createdAt     DateTime    @default(now()) @map("created_at")
+  id            Int      @id @default(autoincrement())
+  destinationId Int      @map("destination_id")
+  name          String   @db.VarChar(200)
+  distanceKm    Int      @map("distance_km")
+  category      String?  @db.VarChar(50)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
 
@@ -98,12 +110,12 @@ model NearbyAttraction {
 
 // 5. Anonymous User Sessions
 model UserSession {
-  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fingerprintHash String     @map("fingerprint_hash") @db.VarChar(64)
-  firstSeen       DateTime   @default(now()) @map("first_seen")
-  lastSeen        DateTime   @default(now()) @map("last_seen")
-  totalSearches   Int        @default(0) @map("total_searches")
-  createdAt       DateTime   @default(now()) @map("created_at")
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fingerprintHash String   @map("fingerprint_hash") @db.VarChar(64)
+  firstSeen       DateTime @default(now()) @map("first_seen")
+  lastSeen        DateTime @default(now()) @map("last_seen")
+  totalSearches   Int      @default(0) @map("total_searches")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   searchLogs SearchLog[]
 
@@ -204,18 +216,18 @@ model DestinationPhoto {
 
 // 11. Distance Matrix Cache
 model DistanceMatrixCache {
-  id             Int      @id @default(autoincrement())
-  originLat      Decimal  @map("origin_lat") @db.Decimal(10, 8)
-  originLng      Decimal  @map("origin_lng") @db.Decimal(11, 8)
-  destinationLat Decimal  @map("destination_lat") @db.Decimal(10, 8)
-  destinationLng Decimal  @map("destination_lng") @db.Decimal(11, 8)
-  transportMode  String   @map("transport_mode") @db.VarChar(20)
-  distanceMeters Int      @map("distance_meters")
-  durationSeconds Int     @map("duration_seconds")
-  distanceText   String?  @map("distance_text") @db.VarChar(50)
-  durationText   String?  @map("duration_text") @db.VarChar(50)
-  routePolyline  String?  @map("route_polyline") @db.Text
-  cachedAt       DateTime @default(now()) @map("cached_at")
+  id              Int      @id @default(autoincrement())
+  originLat       Decimal  @map("origin_lat") @db.Decimal(10, 8)
+  originLng       Decimal  @map("origin_lng") @db.Decimal(11, 8)
+  destinationLat  Decimal  @map("destination_lat") @db.Decimal(10, 8)
+  destinationLng  Decimal  @map("destination_lng") @db.Decimal(11, 8)
+  transportMode   String   @map("transport_mode") @db.VarChar(20)
+  distanceMeters  Int      @map("distance_meters")
+  durationSeconds Int      @map("duration_seconds")
+  distanceText    String?  @map("distance_text") @db.VarChar(50)
+  durationText    String?  @map("duration_text") @db.VarChar(50)
+  routePolyline   String?  @map("route_polyline") @db.Text
+  cachedAt        DateTime @default(now()) @map("cached_at")
 
   @@unique([originLat, originLng, destinationLat, destinationLng, transportMode])
   @@index([originLat, originLng])
@@ -225,20 +237,20 @@ model DistanceMatrixCache {
 
 // 12. Places Cache
 model PlacesCache {
-  id                Int      @id @default(autoincrement())
-  placeId           String   @unique @map("place_id") @db.VarChar(200)
-  name              String?  @db.VarChar(200)
-  formattedAddress  String?  @map("formatted_address") @db.Text
-  rating            Decimal? @db.Decimal(2, 1)
-  userRatingsTotal  Int?     @map("user_ratings_total")
-  types             Json?
-  openingHours      Json?    @map("opening_hours")
-  website           String?  @db.VarChar(500)
-  phoneNumber       String?  @map("phone_number") @db.VarChar(50)
-  reviews           Json?
-  fullResponse      Json     @map("full_response")
-  cachedAt          DateTime @default(now()) @map("cached_at")
-  lastUpdated       DateTime @default(now()) @updatedAt @map("last_updated")
+  id               Int      @id @default(autoincrement())
+  placeId          String   @unique @map("place_id") @db.VarChar(500)
+  name             String?  @db.VarChar(500)
+  formattedAddress String?  @map("formatted_address") @db.Text
+  rating           Decimal? @db.Decimal(2, 1)
+  userRatingsTotal Int?     @map("user_ratings_total")
+  types            Json?
+  openingHours     Json?    @map("opening_hours")
+  website          String?  @db.Text
+  phoneNumber      String?  @map("phone_number") @db.VarChar(50)
+  reviews          Json?
+  fullResponse     Json     @map("full_response")
+  cachedAt         DateTime @default(now()) @map("cached_at")
+  lastUpdated      DateTime @default(now()) @updatedAt @map("last_updated")
 
   @@index([placeId])
   @@map("places_cache")

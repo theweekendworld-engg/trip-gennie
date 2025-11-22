@@ -50,3 +50,9 @@ next-env.d.ts
 prisma/migrations
 prisma.config.ts
 prisma/seed.ts
+
+# seed logs
+*.log
+
+# scripts
+scripts/
