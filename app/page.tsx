@@ -4,14 +4,14 @@ import ThemeToggle from '../components/ui/ThemeToggle';
 import CitySearch from '../components/home/CitySearch';
 import StructuredData from '../components/StructuredData';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://tripgenie.com';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    ? `https://${process.env.NEXT_PUBLIC_BASE_URL}`
+    : 'https://tripgennie.in';
 
 const homepageStructuredData = {
     '@context': 'https://schema.org',
     '@type': 'TravelAgency',
-    name: 'TripGenie',
+    name: 'TripGennie',
     description: 'Discover amazing weekend getaways from Indian cities. Find perfect 1-day and 2-day trips tailored to your budget, time, and interests.',
     url: baseUrl,
     logo: `${baseUrl}/icon.svg`,
@@ -54,7 +54,7 @@ export default function HomePage() {
                         <div className="mb-8 animate-scale-in">
                             <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/95 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg border border-gray-200/50 dark:border-gray-700/50">
                                 <span className="text-3xl">✨</span>
-                                <span className="font-display text-2xl font-bold text-gradient">TripGenie</span>
+                                <span className="font-display text-2xl font-bold text-gradient">TripGennie</span>
                             </div>
                         </div>
 
@@ -127,10 +127,10 @@ export default function HomePage() {
                             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                                 <div className="flex items-center gap-2">
                                     <span className="text-2xl">✨</span>
-                                    <span className="font-display font-bold text-lg text-foreground">TripGenie</span>
+                                    <span className="font-display font-bold text-lg text-foreground">TripGennie</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
-                                    © 2024 TripGenie. Discover your next adventure.
+                                    © 2025 TripGennie. Discover your next adventure.
                                 </p>
                             </div>
                         </div>

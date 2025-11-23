@@ -1,15 +1,25 @@
 import { Metadata } from 'next';
 import { generateDestinationMetadata } from './metadata';
 import { prisma } from '../../../lib/db';
-import { CITIES } from '../../../lib/constants';
+import { getCityBySlug } from '../../../lib/cities';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ 
     params 
 }: { 
-    params: { city: string; destination: string } 
+    params: Promise<{ city: string; destination: string }>
 }): Promise<Metadata> {
     try {
-        const city = CITIES.find(c => c.slug === params.city);
+        const { city: citySlug, destination: destinationSlug } = await params;
+        
+        if (!citySlug || !destinationSlug) {
+            return {
+                title: 'Destination Not Found | TripGenie',
+            };
+        }
+        
+        const city = await getCityBySlug(citySlug);
         if (!city) {
             return {
                 title: 'Destination Not Found | TripGenie',
@@ -20,7 +30,7 @@ export async function generateMetadata({
             where: {
                 cityId: city.id,
                 destination: {
-                    slug: params.destination,
+                    slug: destinationSlug,
                     isActive: true,
                 },
             },
@@ -36,8 +46,8 @@ export async function generateMetadata({
         }
 
         return generateDestinationMetadata(
-            params.city,
-            params.destination,
+            citySlug,
+            destinationSlug,
             {
                 name: cityDestination.destination.name,
                 category: cityDestination.destination.category,

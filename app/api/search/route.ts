@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db';
 import { SearchFilters } from '../../../types';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url);
         const filters: SearchFilters = await request.json();
 
         // Validate required fields
@@ -114,23 +116,33 @@ export async function POST(request: Request) {
             where.transportMode = { in: validatedFilters.transportModes };
         }
 
-        // Fetch results
-        const results = await prisma.cityDestination.findMany({
-            where,
-            include: {
-                destination: {
-                    include: {
-                        destinationPhotos: {
-                            where: { isPrimary: true },
-                            take: 1,
+        // Get pagination parameters
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
+
+        // Fetch results with pagination
+        const [results, total] = await Promise.all([
+            prisma.cityDestination.findMany({
+                where,
+                include: {
+                    destination: {
+                        include: {
+                            destinationPhotos: {
+                                where: { isPrimary: true },
+                                take: 1,
+                            },
                         },
                     },
                 },
-            },
-            orderBy: {
-                distanceKm: 'asc',
-            },
-        });
+                orderBy: {
+                    distanceKm: 'asc',
+                },
+                skip,
+                take: limit,
+            }),
+            prisma.cityDestination.count({ where }),
+        ]);
 
         // Group by destination to avoid duplicates (same destination with different transport modes)
         // Prefer driving over transit when both exist
@@ -174,7 +186,14 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             count: trips.length,
+            total,
             trips,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit),
+            },
         });
     } catch (error) {
         console.error('Search API error:', error);

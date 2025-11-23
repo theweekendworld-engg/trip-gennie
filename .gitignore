@@ -58,4 +58,8 @@ prisma/seed.ts
 scripts/*
 
 seed-nearby.ts
+create-admin.ts
+
+# uploaded images
+/public/uploads
 

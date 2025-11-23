@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { CITIES } from '../../lib/constants';
+import { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
+import { cachedFetch } from '../../lib/api-cache';
+
+interface City {
+    id: number;
+    name: string;
+    slug: string;
+    state: string;
+}
 
 interface CitySelectorProps {
     selectedCity?: number;
@@ -13,8 +20,29 @@ interface CitySelectorProps {
 
 export default function CitySelector({ selectedCity, onCitySelect, className, label = 'Starting from' }: CitySelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [cities, setCities] = useState<City[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const selected = CITIES.find(c => c.id === selectedCity);
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                const data = await cachedFetch<{ success: boolean; cities: City[] }>('/api/cities', undefined, {
+                    ttl: 10 * 60 * 1000, // Cache for 10 minutes
+                });
+                if (data.success) {
+                    setCities(data.cities);
+                }
+            } catch (error) {
+                console.error('Failed to fetch cities:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCities();
+    }, []);
+
+    const selected = cities.find(c => c.id === selectedCity);
 
     return (
         <div className={cn('relative', className)}>
@@ -59,7 +87,10 @@ export default function CitySelector({ selectedCity, onCitySelect, className, la
                     />
                     <div className="absolute top-full left-0 right-0 mt-2 z-20 animate-slide-up">
                         <div className="glass rounded-xl shadow-xl overflow-hidden">
-                            {CITIES.map((city) => (
+                            {loading ? (
+                                <div className="p-4 text-center text-muted-foreground">Loading cities...</div>
+                            ) : (
+                                cities.map((city) => (
                                 <button
                                     key={city.id}
                                     onClick={() => {
@@ -91,7 +122,8 @@ export default function CitySelector({ selectedCity, onCitySelect, className, la
                                         </svg>
                                     )}
                                 </button>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </div>
                 </>

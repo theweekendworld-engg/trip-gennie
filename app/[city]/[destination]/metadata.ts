@@ -1,11 +1,11 @@
 import { Metadata } from 'next';
-import { CITIES } from '../../../lib/constants';
+import { getCityBySlug } from '../../../lib/cities';
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}` 
     : 'https://tripgenie.com';
 
-export function generateDestinationMetadata(
+export async function generateDestinationMetadata(
     citySlug: string,
     destinationSlug: string,
     destination: {
@@ -18,8 +18,8 @@ export function generateDestinationMetadata(
         estimatedCost: number;
         imageUrl?: string;
     }
-): Metadata {
-    const city = CITIES.find(c => c.slug === citySlug);
+): Promise<Metadata> {
+    const city = await getCityBySlug(citySlug);
     const cityName = city?.name || citySlug;
     
     const categoryLabels: Record<string, string> = {

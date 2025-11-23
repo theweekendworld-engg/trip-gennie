@@ -2,11 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import FilterPanel from '../../components/ui/FilterPanel';
+import dynamic from 'next/dynamic';
 import TripCard from '../../components/ui/TripCard';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 import CitySearch from '../../components/home/CitySearch';
 import { SearchFilters, TripResult } from '../../types';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import { cachedFetch } from '../../lib/api-cache';
+
+// Lazy load FilterPanel (not critical for initial render)
+const FilterPanel = dynamic(() => import('../../components/ui/FilterPanel'), {
+    loading: () => <div className="card h-96 animate-pulse bg-gray-200 dark:bg-gray-700" />,
+    ssr: false,
+});
 
 interface City {
     id: number;
@@ -19,6 +27,7 @@ export default function CityPage() {
     const params = useParams();
     const router = useRouter();
     const citySlug = params.city as string;
+    const { trackSearch } = useAnalytics();
 
     const [city, setCity] = useState<City | null>(null);
     const [filters, setFilters] = useState<SearchFilters>({
@@ -31,19 +40,28 @@ export default function CityPage() {
     const [loading, setLoading] = useState(false);
     const [cityLoading, setCityLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 20,
+        total: 0,
+        pages: 0,
+    });
 
     // Filter trips based on search query
     const filteredTrips = trips.filter(trip =>
         trip.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Fetch city from database
+    // Fetch city from database (with caching)
     useEffect(() => {
         const fetchCity = async () => {
             setCityLoading(true);
             try {
-                const response = await fetch(`/api/cities?search=${citySlug}`);
-                const data = await response.json();
+                const data = await cachedFetch<{ success: boolean; cities: City[] }>(
+                    `/api/cities?search=${citySlug}`,
+                    undefined,
+                    { ttl: 10 * 60 * 1000 } // Cache for 10 minutes
+                );
                 if (data.success && data.cities.length > 0) {
                     const foundCity = data.cities.find((c: City) => c.slug === citySlug);
                     if (foundCity) {
@@ -68,16 +86,31 @@ export default function CityPage() {
         setError(null);
 
         try {
-            const response = await fetch('/api/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(filters),
-            });
-
-            const data = await response.json();
+            const data = await cachedFetch<{ success: boolean; trips?: TripResult[]; error?: string; pagination?: any; total?: number }>(
+                `/api/search?page=${pagination.page}&limit=${pagination.limit}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters),
+                },
+                { ttl: 5 * 60 * 1000, forceCache: true } // Cache search results for 5 minutes
+            );
 
             if (data.success) {
-                setTrips(data.trips);
+                setTrips(data.trips || []);
+                if (data.pagination) {
+                    setPagination(prev => ({
+                        ...prev,
+                        total: data.pagination.total,
+                        pages: data.pagination.pages,
+                    }));
+                } else if (data.total !== undefined) {
+                    setPagination(prev => ({
+                        ...prev,
+                        total: data.total || 0,
+                        pages: Math.ceil((data.total || 0) / prev.limit),
+                    }));
+                }
             } else {
                 setError(data.error || 'Failed to load trips');
             }
@@ -87,14 +120,20 @@ export default function CityPage() {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, pagination.page, pagination.limit]);
 
     // Search trips when filters change
     useEffect(() => {
         if (filters.cityId) {
+            setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
+        }
+    }, [filters]);
+
+    useEffect(() => {
+        if (filters.cityId) {
             searchTrips();
         }
-    }, [filters, searchTrips]);
+    }, [filters, pagination.page, searchTrips]);
 
     if (cityLoading) {
         return (
@@ -239,15 +278,78 @@ export default function CityPage() {
 
                         {/* Results Grid */}
                         {!loading && !error && filteredTrips.length > 0 && (
-                            <div className="grid-auto-fill">
-                                {filteredTrips.map((trip) => (
-                                    <TripCard
-                                        key={trip.id}
-                                        trip={trip}
-                                        citySlug={citySlug}
-                                    />
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid-auto-fill">
+                                    {filteredTrips.map((trip) => (
+                                        <TripCard
+                                            key={trip.id}
+                                            trip={trip}
+                                            citySlug={citySlug}
+                                        />
+                                    ))}
+                                </div>
+                                
+                                {/* Pagination */}
+                                {pagination.pages > 1 && (
+                                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} destinations
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setPagination(prev => ({ ...prev, page: prev.page - 1 }));
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                disabled={pagination.page === 1}
+                                                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            >
+                                                Previous
+                                            </button>
+                                            <div className="flex gap-1">
+                                                {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                                    let pageNum;
+                                                    if (pagination.pages <= 5) {
+                                                        pageNum = i + 1;
+                                                    } else if (pagination.page <= 3) {
+                                                        pageNum = i + 1;
+                                                    } else if (pagination.page >= pagination.pages - 2) {
+                                                        pageNum = pagination.pages - 4 + i;
+                                                    } else {
+                                                        pageNum = pagination.page - 2 + i;
+                                                    }
+                                                    return (
+                                                        <button
+                                                            key={pageNum}
+                                                            onClick={() => {
+                                                                setPagination(prev => ({ ...prev, page: pageNum }));
+                                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                            }}
+                                                            className={`px-4 py-2 rounded-lg border transition-colors ${
+                                                                pagination.page === pageNum
+                                                                    ? 'bg-primary-600 text-white border-primary-600'
+                                                                    : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                            }`}
+                                                        >
+                                                            {pageNum}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setPagination(prev => ({ ...prev, page: prev.page + 1 }));
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                disabled={pagination.page === pagination.pages}
+                                                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {/* Empty State */}

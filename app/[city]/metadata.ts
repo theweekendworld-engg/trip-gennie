@@ -1,16 +1,16 @@
 import { Metadata } from 'next';
-import { CITIES } from '../../lib/constants';
+import { getCityBySlug } from '../../lib/cities';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'https://tripgenie.com';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'https://tripgennie.com';
 
-export function generateCityMetadata(citySlug: string): Metadata {
-    const city = CITIES.find(c => c.slug === citySlug);
-    
+export async function generateCityMetadata(citySlug: string): Promise<Metadata> {
+    const city = await getCityBySlug(citySlug);
+
     if (!city) {
         return {
-            title: 'City Not Found | TripGenie',
+            title: 'City Not Found | TripGennie',
             description: 'The requested city page could not be found.',
         };
     }

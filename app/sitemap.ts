@@ -1,19 +1,24 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '../lib/db';
-import { CITIES } from '../lib/constants';
+import { getAllActiveCities } from '../lib/cities';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : 'https://tripgenie.com';
-    
-    // Get all active destinations from database
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        ? `https://${process.env.NEXT_PUBLIC_BASE_URL}`
+        : 'https://tripgennie.in';
+
+    // Get all active cities from database
+    let cities: Array<{ id: number; slug: string }> = [];
     let destinations: Array<{ slug: string; cityId: number }> = [];
-    
+
     try {
+        // Fetch cities
+        cities = await getAllActiveCities();
+
+        // Get all active destinations from database
         const cityDestinations = await prisma.cityDestination.findMany({
             where: {
                 destination: {
@@ -36,9 +41,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             cityId: cd.cityId,
         }));
     } catch (error) {
-        console.error('Error fetching destinations for sitemap:', error);
-        // Fallback to empty array if database is not available
-        // This ensures the sitemap still works with at least city pages
+        console.error('Error fetching data for sitemap:', error);
+        // Fallback to empty arrays if database is not available
     }
 
     // Homepage
@@ -52,7 +56,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ];
 
     // City pages
-    CITIES.forEach((city) => {
+    cities.forEach((city) => {
         routes.push({
             url: `${baseUrl}/${city.slug}`,
             lastModified: new Date(),
@@ -63,7 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Destination pages
     destinations.forEach((dest) => {
-        const city = CITIES.find(c => c.id === dest.cityId);
+        const city = cities.find(c => c.id === dest.cityId);
         if (city) {
             routes.push({
                 url: `${baseUrl}/${city.slug}/${dest.slug}`,

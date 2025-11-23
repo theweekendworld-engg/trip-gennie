@@ -1,0 +1,43 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="180" height="180" rx="40" fill="url(#bgGradient)"/>
+  
+  <!-- Main Sparkle/Star - Scaled up for larger icon -->
+  <path d="M90 22L99 62L139 70L99 78L90 118L81 78L41 70L81 62L90 22Z" 
+        fill="url(#sparkleGradient)" 
+        opacity="0.95"/>
+  
+  <!-- Inner sparkle highlight -->
+  <path d="M90 39L96 65L122 70L96 75L90 101L84 75L58 70L84 65L90 39Z" 
+        fill="white" 
+        opacity="0.6"/>
+  
+  <!-- Accent sparkles for magic effect -->
+  <circle cx="56" cy="45" r="8" fill="url(#accentGradient)" opacity="0.8"/>
+  <circle cx="124" cy="50" r="6" fill="url(#accentGradient)" opacity="0.7"/>
+  <circle cx="129" cy="112" r="7" fill="url(#accentGradient)" opacity="0.75"/>
+  <circle cx="51" cy="124" r="6" fill="url(#accentGradient)" opacity="0.7"/>
+  
+  <defs>
+    <!-- Background gradient - Blue to Purple (matching brand) -->
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6366F1"/>
+      <stop offset="0.5" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    
+    <!-- Sparkle gradient - Gold/Yellow (magic/warmth) -->
+    <linearGradient id="sparkleGradient" x1="41" y1="22" x2="139" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCD34D"/>
+      <stop offset="0.5" stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+    
+    <!-- Accent gradient for small sparkles -->
+    <linearGradient id="accentGradient" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCD34D"/>
+      <stop offset="1" stop-color="#FBBF24"/>
+    </linearGradient>
+  </defs>
+</svg>
+

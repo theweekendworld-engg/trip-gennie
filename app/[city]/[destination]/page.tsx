@@ -2,33 +2,101 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import ThemeToggle from '../../../components/ui/ThemeToggle';
-import RouteMap from '../../../components/destination/RouteMap';
 import TransportModeSelector from '../../../components/destination/TransportModeSelector';
 import FareComparisonCard from '../../../components/destination/FareComparisonCard';
 import WeatherWidget from '../../../components/destination/WeatherWidget';
-import NearbyAttractionsCarousel from '../../../components/destination/NearbyAttractionsCarousel';
-import { CITIES, CATEGORIES } from '../../../lib/constants';
+import { useIntersectionObserver } from '../../../hooks/useIntersectionObserver';
+import { CATEGORIES } from '../../../lib/constants';
 import { formatDistance, formatDuration } from '../../../lib/utils';
+import { cachedFetch } from '../../../lib/api-cache';
 import type { DestinationResponse, TransportOption } from '../../../types/destination';
+
+// Lazy load heavy components
+const RouteMap = dynamic(() => import('../../../components/destination/RouteMap'), {
+    loading: () => <div className="card h-96 animate-pulse bg-gray-200 dark:bg-gray-700" />,
+    ssr: false,
+});
+
+const NearbyAttractionsCarousel = dynamic(() => import('../../../components/destination/NearbyAttractionsCarousel'), {
+    loading: () => <div className="card h-64 animate-pulse bg-gray-200 dark:bg-gray-700" />,
+    ssr: false,
+});
+
+// Lazy load RouteMap only when it comes into viewport
+function LazyRouteMap(props: any) {
+    const [ref, isVisible] = useIntersectionObserver<HTMLDivElement>({ threshold: 0.1 });
+    
+    return (
+        <div ref={ref}>
+            {isVisible ? <RouteMap {...props} /> : <div className="card h-96 animate-pulse bg-gray-200 dark:bg-gray-700" />}
+        </div>
+    );
+}
+
+// Lazy load NearbyAttractionsCarousel only when it comes into viewport
+function LazyNearbyAttractions(props: any) {
+    const [ref, isVisible] = useIntersectionObserver<HTMLDivElement>({ threshold: 0.1 });
+    
+    return (
+        <div ref={ref}>
+            {isVisible ? <NearbyAttractionsCarousel {...props} /> : <div className="card h-64 animate-pulse bg-gray-200 dark:bg-gray-700" />}
+        </div>
+    );
+}
 
 const TRANSPORT_MODES = [
     { value: 'driving', label: 'Driving', emoji: '🚗' },
     { value: 'transit', label: 'Transit', emoji: '🚌' },
 ];
 
+interface City {
+    id: number;
+    name: string;
+    slug: string;
+    state: string;
+}
+
 export default function DestinationPage() {
     const params = useParams();
     const citySlug = params.city as string;
     const destinationSlug = params.destination as string;
 
-    const city = CITIES.find(c => c.slug === citySlug);
+    const [city, setCity] = useState<City | null>(null);
     const [data, setData] = useState<DestinationResponse | null>(null);
     const [selectedMode, setSelectedMode] = useState<string>('driving');
     const [loading, setLoading] = useState(true);
+    const [cityLoading, setCityLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Fetch city from database (with caching)
+    useEffect(() => {
+        const fetchCity = async () => {
+            setCityLoading(true);
+            try {
+                const data = await cachedFetch<{ success: boolean; cities: City[] }>(
+                    `/api/cities?search=${citySlug}`,
+                    undefined,
+                    { ttl: 10 * 60 * 1000 } // Cache for 10 minutes
+                );
+                if (data.success && data.cities.length > 0) {
+                    const foundCity = data.cities.find((c: City) => c.slug === citySlug);
+                    if (foundCity) {
+                        setCity(foundCity);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch city:', error);
+            } finally {
+                setCityLoading(false);
+            }
+        };
+
+        fetchCity();
+    }, [citySlug]);
 
     useEffect(() => {
         if (!city || !destinationSlug) return;
@@ -38,16 +106,18 @@ export default function DestinationPage() {
             setError(null);
 
             try {
-                const response = await fetch('/api/destination', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        citySlug,
-                        destinationSlug,
-                    }),
-                });
-
-                const responseData = await response.json();
+                const responseData = await cachedFetch<DestinationResponse>(
+                    '/api/destination',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            citySlug,
+                            destinationSlug,
+                        }),
+                    },
+                    { ttl: 10 * 60 * 1000, forceCache: true } // Cache for 10 minutes
+                );
 
                 if (responseData.success) {
                     setData(responseData);
@@ -68,6 +138,17 @@ export default function DestinationPage() {
 
         fetchDestination();
     }, [city, citySlug, destinationSlug]);
+
+    if (cityLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading city...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!city) {
         return (
@@ -209,9 +290,9 @@ export default function DestinationPage() {
                             </p>
                         </div>
 
-                        {/* Nearby Attractions */}
+                        {/* Nearby Attractions - Lazy loaded when in viewport */}
                         {nearbyAttractions && nearbyAttractions.length > 0 && (
-                            <NearbyAttractionsCarousel attractions={nearbyAttractions} />
+                            <LazyNearbyAttractions attractions={nearbyAttractions} />
                         )}
 
                         {/* Photos Gallery */}
@@ -227,6 +308,7 @@ export default function DestinationPage() {
                                                     alt={`${destination.name} - Photo ${idx + 2}`}
                                                     fill
                                                     className="object-cover"
+                                                    loading="lazy"
                                                     unoptimized={photo.photoUrl.includes('googleapis.com')}
                                                 />
                                             </div>
@@ -236,9 +318,9 @@ export default function DestinationPage() {
                             </div>
                         )}
 
-                        {/* Route Map */}
+                        {/* Route Map - Lazy loaded when in viewport */}
                         {destination.latitude && destination.longitude && data.city && (
-                            <RouteMap
+                            <LazyRouteMap
                                 latitude={destination.latitude}
                                 longitude={destination.longitude}
                                 destinationName={destination.name}

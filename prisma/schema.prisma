@@ -255,3 +255,61 @@ model PlacesCache {
   @@index([placeId])
   @@map("places_cache")
 }
+
+// 12. Analytics Events (Track website visits and interactions)
+model AnalyticsEvent {
+  id            Int      @id @default(autoincrement())
+  eventType     String   @map("event_type") @db.VarChar(50) // 'page_view', 'search', 'destination_click', etc.
+  page          String?  @db.VarChar(500) // URL path
+  cityId        Int?     @map("city_id")
+  destinationId Int?     @map("destination_id")
+  userAgent     String?  @map("user_agent") @db.Text
+  ipHash        String?  @map("ip_hash") @db.VarChar(64) // Hashed IP for privacy
+  timestamp     DateTime @default(now())
+  metadata      Json? // Additional event data
+
+  @@index([eventType, timestamp])
+  @@index([cityId])
+  @@index([destinationId])
+  @@index([timestamp])
+  @@map("analytics_events")
+}
+
+// 13. Admin Users (For admin panel authentication)
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  name         String?   @db.VarChar(100)
+  role         String    @default("admin") @db.VarChar(20) // 'super_admin', 'admin', 'viewer'
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@index([isActive])
+  @@map("admin_users")
+}
+
+// 14. Audit Logs (Track admin actions)
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  adminUserId Int      @map("admin_user_id")
+  action      String   @db.VarChar(100) // 'create_city', 'delete_destination', 'update_destination', etc.
+  entityType  String   @map("entity_type") @db.VarChar(50) // 'city', 'destination', 'admin_user'
+  entityId    Int?     @map("entity_id") // ID of the affected entity
+  changes     Json? // Before/after values for updates
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  timestamp   DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([entityType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}

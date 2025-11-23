@@ -25,6 +25,7 @@ export default function TripCard({ trip, citySlug }: TripCardProps) {
                             alt={trip.name}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            loading="lazy"
                             unoptimized={
                                 trip.imageUrl.includes('unsplash.com') ||
                                 trip.imageUrl.includes('googleapis.com')

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { cachedFetch } from '../../lib/api-cache';
 
 interface City {
     id: number;
@@ -23,13 +24,14 @@ export default function CitySearch() {
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch all cities on mount
+    // Fetch all cities on mount (with caching)
     useEffect(() => {
         const fetchCities = async () => {
             setLoading(true);
             try {
-                const response = await fetch('/api/cities');
-                const data = await response.json();
+                const data = await cachedFetch<{ success: boolean; cities: City[] }>('/api/cities', undefined, {
+                    ttl: 10 * 60 * 1000, // Cache for 10 minutes
+                });
                 if (data.success) {
                     setCities(data.cities);
                 }
