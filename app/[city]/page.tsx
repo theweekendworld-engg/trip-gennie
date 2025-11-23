@@ -5,31 +5,61 @@ import { useParams, useRouter } from 'next/navigation';
 import FilterPanel from '../../components/ui/FilterPanel';
 import TripCard from '../../components/ui/TripCard';
 import ThemeToggle from '../../components/ui/ThemeToggle';
-import CitySelector from '../../components/ui/CitySelector';
+import CitySearch from '../../components/home/CitySearch';
 import { SearchFilters, TripResult } from '../../types';
-import { CITIES } from '../../lib/constants';
+
+interface City {
+    id: number;
+    name: string;
+    slug: string;
+    state: string;
+}
 
 export default function CityPage() {
     const params = useParams();
     const router = useRouter();
     const citySlug = params.city as string;
-    const city = CITIES.find(c => c.slug === citySlug);
 
+    const [city, setCity] = useState<City | null>(null);
     const [filters, setFilters] = useState<SearchFilters>({
-        cityId: city?.id || 1,
+        cityId: undefined,
         categories: undefined,
         transportModes: undefined,
     });
     const [trips, setTrips] = useState<TripResult[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
+    const [cityLoading, setCityLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const handleCityChange = (newCityId: number) => {
-        const newCity = CITIES.find(c => c.id === newCityId);
-        if (newCity) {
-            router.push(`/${newCity.slug}`);
-        }
-    };
+    // Filter trips based on search query
+    const filteredTrips = trips.filter(trip =>
+        trip.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Fetch city from database
+    useEffect(() => {
+        const fetchCity = async () => {
+            setCityLoading(true);
+            try {
+                const response = await fetch(`/api/cities?search=${citySlug}`);
+                const data = await response.json();
+                if (data.success && data.cities.length > 0) {
+                    const foundCity = data.cities.find((c: City) => c.slug === citySlug);
+                    if (foundCity) {
+                        setCity(foundCity);
+                        setFilters(prev => ({ ...prev, cityId: foundCity.id }));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch city:', error);
+            } finally {
+                setCityLoading(false);
+            }
+        };
+
+        fetchCity();
+    }, [citySlug]);
 
     const searchTrips = useCallback(async () => {
         if (!filters.cityId) return;
@@ -59,32 +89,33 @@ export default function CityPage() {
         }
     }, [filters]);
 
-    // Reset filters when city changes
-    useEffect(() => {
-        if (city && city.id !== filters.cityId) {
-            setFilters({
-                cityId: city.id,
-                categories: undefined,
-                transportModes: undefined,
-                maxBudget: undefined,
-                maxTravelTime: undefined,
-            });
-        }
-    }, [city, filters.cityId]);
-
     // Search trips when filters change
     useEffect(() => {
-        if (city) {
+        if (filters.cityId) {
             searchTrips();
         }
-    }, [city, searchTrips]);
+    }, [filters, searchTrips]);
+
+    if (cityLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading city...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!city) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold mb-2">City not found</h1>
-                    <p className="text-muted-foreground">Please select a valid city</p>
+                    <p className="text-muted-foreground mb-4">The city you're looking for doesn't exist or hasn't been added yet.</p>
+                    <a href="/" className="btn-primary">
+                        Back to Home
+                    </a>
                 </div>
             </div>
         );
@@ -101,12 +132,8 @@ export default function CityPage() {
                             <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
                         </a>
                         <div className="flex items-center gap-4">
-                            <div className="w-72">
-                                <CitySelector
-                                    selectedCity={city.id}
-                                    onCitySelect={handleCityChange}
-                                    label="Exploring from"
-                                />
+                            <div className="w-96">
+                                <CitySearch />
                             </div>
                             <ThemeToggle />
                         </div>
@@ -129,18 +156,55 @@ export default function CityPage() {
                     <main className="lg:col-span-3">
                         {/* Results Header */}
                         <div className="mb-6">
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center justify-between mb-4">
                                 <h1 className="text-3xl font-bold">
                                     Weekend Trips from {city.name}
                                 </h1>
                             </div>
+
+                            {/* Search Bar */}
+                            <div className="relative mb-4">
+                                <input
+                                    type="text"
+                                    placeholder="Search destinations..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                                />
+                                <svg
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+
                             <p className="text-muted-foreground">
                                 {loading ? (
                                     'Searching...'
-                                ) : trips.length === 0 ? (
+                                ) : filteredTrips.length === 0 && searchQuery ? (
+                                    `No destinations found matching "${searchQuery}"`
+                                ) : filteredTrips.length === 0 ? (
                                     'No trips found. Try adjusting your filters.'
                                 ) : (
-                                    `Found ${trips.length} amazing destination${trips.length === 1 ? '' : 's'}`
+                                    `Found ${filteredTrips.length} amazing destination${filteredTrips.length === 1 ? '' : 's'}${searchQuery ? ` matching "${searchQuery}"` : ''}`
                                 )}
                             </p>
                         </div>
@@ -174,9 +238,9 @@ export default function CityPage() {
                         )}
 
                         {/* Results Grid */}
-                        {!loading && !error && trips.length > 0 && (
+                        {!loading && !error && filteredTrips.length > 0 && (
                             <div className="grid-auto-fill">
-                                {trips.map((trip) => (
+                                {filteredTrips.map((trip) => (
                                     <TripCard
                                         key={trip.id}
                                         trip={trip}
@@ -187,6 +251,21 @@ export default function CityPage() {
                         )}
 
                         {/* Empty State */}
+                        {!loading && !error && filteredTrips.length === 0 && trips.length > 0 && searchQuery && (
+                            <div className="card p-12 text-center">
+                                <div className="text-6xl mb-4">🔍</div>
+                                <h3 className="text-xl font-semibold mb-2">No destinations found</h3>
+                                <p className="text-muted-foreground mb-6">
+                                    No destinations match "{searchQuery}". Try a different search term.
+                                </p>
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="btn-primary"
+                                >
+                                    Clear Search
+                                </button>
+                            </div>
+                        )}
                         {!loading && !error && trips.length === 0 && (
                             <div className="card p-12 text-center">
                                 <div className="text-6xl mb-4">🔍</div>

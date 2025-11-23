@@ -86,10 +86,13 @@ export async function POST(request: Request) {
         };
 
         // Apply budget filter (check both fuel and transport costs)
+        // Treat null as 0 to match frontend display
         if (validatedFilters.maxBudget) {
             where.OR = [
                 { estimatedFuelCost: { lte: validatedFilters.maxBudget } },
                 { estimatedTransportCost: { lte: validatedFilters.maxBudget } },
+                { estimatedFuelCost: null },
+                { estimatedTransportCost: null },
             ];
         }
 
@@ -127,16 +130,33 @@ export async function POST(request: Request) {
             orderBy: {
                 distanceKm: 'asc',
             },
-            take: 50,
         });
 
+        // Group by destination to avoid duplicates (same destination with different transport modes)
+        // Prefer driving over transit when both exist
+        const uniqueDestinations = new Map<number, typeof results[0]>();
+
+        for (const result of results) {
+            const destId = result.destination.id;
+            const existing = uniqueDestinations.get(destId);
+
+            if (!existing) {
+                uniqueDestinations.set(destId, result);
+            } else {
+                // Prefer driving over transit
+                if (result.transportMode === 'driving' && existing.transportMode === 'transit') {
+                    uniqueDestinations.set(destId, result);
+                }
+            }
+        }
+
         // Transform to TripResult format
-        const trips = results.map((cd) => {
+        const trips = Array.from(uniqueDestinations.values()).map((cd) => {
             // Get primary photo first, then fallback to any photo, then imageUrl
             const primaryPhoto = cd.destination.destinationPhotos.find(p => p.isPrimary);
             const anyPhoto = cd.destination.destinationPhotos[0];
             const imageUrl = primaryPhoto?.photoUrl || anyPhoto?.photoUrl || cd.destination.imageUrl;
-            
+
             return {
                 id: cd.destination.id,
                 name: cd.destination.name,

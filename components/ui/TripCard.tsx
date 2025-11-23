@@ -25,7 +25,10 @@ export default function TripCard({ trip, citySlug }: TripCardProps) {
                             alt={trip.name}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
-                            unoptimized={trip.imageUrl.includes('unsplash.com')}
+                            unoptimized={
+                                trip.imageUrl.includes('unsplash.com') ||
+                                trip.imageUrl.includes('googleapis.com')
+                            }
                             onError={(e) => {
                                 // Fallback to emoji if image fails to load
                                 const target = e.target as HTMLImageElement;
@@ -47,15 +50,17 @@ export default function TripCard({ trip, citySlug }: TripCardProps) {
 
                     {/* Category Badge */}
                     <div className="absolute top-4 left-4">
-                        <span className="badge bg-white/90 backdrop-blur-sm text-foreground shadow-lg">
-                            {category?.emoji} {category?.label}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-medium text-sm shadow-lg border border-gray-200 dark:border-gray-700">
+                            <span>{category?.emoji}</span>
+                            <span>{category?.label}</span>
                         </span>
                     </div>
 
                     {/* Distance Badge */}
                     <div className="absolute top-4 right-4">
-                        <span className="badge bg-white/90 backdrop-blur-sm text-foreground shadow-lg">
-                            📍 {formatDistance(trip.distanceKm)}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-medium text-sm shadow-lg border border-gray-200 dark:border-gray-700">
+                            <span>📍</span>
+                            <span>{formatDistance(trip.distanceKm)}</span>
                         </span>
                     </div>
 

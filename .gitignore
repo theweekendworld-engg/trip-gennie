@@ -54,5 +54,8 @@ prisma/seed.ts
 # seed logs
 *.log
 
-# scripts
-scripts/
+#scripts
+scripts/*
+
+seed-nearby.ts
+

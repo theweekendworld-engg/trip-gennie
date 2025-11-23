@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db';
-import { CITIES } from '../../../lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +14,14 @@ export async function POST(request: Request) {
             );
         }
 
-        const city = CITIES.find(c => c.slug === citySlug);
+        // Fetch city from database
+        const city = await prisma.city.findFirst({
+            where: {
+                slug: citySlug,
+                isActive: true,
+            },
+        });
+
         if (!city) {
             return NextResponse.json(
                 { success: false, error: 'City not found.' },
@@ -29,60 +35,82 @@ export async function POST(request: Request) {
             select: { latitude: true, longitude: true },
         });
 
-        // Find the destination with city-destination relationship
-        const cityDestination = await prisma.cityDestination.findFirst({
+        // Find the destination
+        const destination = await prisma.destination.findFirst({
             where: {
-                cityId: city.id,
-                destination: {
-                    slug: destinationSlug,
-                    isActive: true,
-                },
+                slug: destinationSlug,
+                isActive: true,
             },
             include: {
-                destination: {
-                    include: {
-                        destinationPhotos: {
-                            orderBy: { isPrimary: 'desc' },
-                            take: 10,
-                        },
-                    },
+                destinationPhotos: {
+                    orderBy: { isPrimary: 'desc' },
+                    take: 10,
+                },
+                nearbyAttractions: {
+                    take: 6,
                 },
             },
         });
 
-        if (!cityDestination) {
+        if (!destination) {
             return NextResponse.json(
                 { success: false, error: 'Destination not found.' },
                 { status: 404 }
             );
         }
 
-        const dest = cityDestination.destination;
+        // Fetch both transport modes
+        const transportOptions = await prisma.cityDestination.findMany({
+            where: {
+                cityId: city.id,
+                destinationId: destination.id,
+            },
+        });
 
-        // Transform to response format
-        const destination = {
-            id: dest.id,
-            name: dest.name,
-            slug: dest.slug,
-            category: dest.category,
-            shortSummary: dest.shortSummary,
-            aiEnhancedSummary: dest.aiEnhancedSummary,
-            bestMonths: dest.bestMonths,
-            imageUrl: dest.imageUrl,
-            latitude: Number(dest.latitude),
-            longitude: Number(dest.longitude),
-            distanceKm: cityDestination.distanceKm,
-            travelTimeMinutes: cityDestination.travelTimeMinutes,
-            estimatedCost: cityDestination.estimatedFuelCost || cityDestination.estimatedTransportCost || 0,
-            transportMode: cityDestination.transportMode,
-            destinationPhotos: dest.destinationPhotos.map(photo => ({
+        // Transform transport options
+        const formattedTransportOptions = transportOptions.map(option => ({
+            mode: option.transportMode,
+            distanceKm: option.distanceKm,
+            travelTimeMinutes: option.travelTimeMinutes,
+            routePolyline: option.routePolyline,
+            majorWaypoints: option.majorWaypoints,
+            fareDetails: option.fareDetails,
+            bookingLinks: option.bookingLinks,
+        }));
+
+        // Transform destination data
+        const destinationData = {
+            id: destination.id,
+            name: destination.name,
+            slug: destination.slug,
+            category: destination.category,
+            shortSummary: destination.shortSummary,
+            aiEnhancedSummary: destination.aiEnhancedSummary,
+            bestMonths: destination.bestMonths,
+            imageUrl: destination.imageUrl,
+            latitude: Number(destination.latitude),
+            longitude: Number(destination.longitude),
+            weatherInfo: destination.weatherInfo,
+            airQuality: destination.airQuality,
+            bestVisitTime: destination.bestVisitTime,
+            destinationPhotos: destination.destinationPhotos.map(photo => ({
                 photoUrl: photo.photoUrl,
             })),
         };
 
+        // Transform nearby attractions
+        const nearbyAttractions = destination.nearbyAttractions.map(nearby => ({
+            id: nearby.id,
+            name: nearby.name,
+            distanceKm: nearby.distanceKm,
+            category: nearby.category,
+        }));
+
         return NextResponse.json({
             success: true,
-            destination,
+            destination: destinationData,
+            transportOptions: formattedTransportOptions,
+            nearbyAttractions,
             city: cityData ? {
                 name: city.name,
                 latitude: cityData.latitude,

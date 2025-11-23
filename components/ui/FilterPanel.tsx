@@ -69,7 +69,7 @@ export default function FilterPanel({ filters, onFiltersChange, className }: Fil
         const updated = current.includes(category)
             ? current.filter(c => c !== category)
             : [...current, category];
-        onFiltersChange({ ...filters, categories: updated });
+        onFiltersChange({ ...filters, categories: updated.length > 0 ? updated : undefined });
     };
 
     const toggleTransport = (mode: string) => {
@@ -77,7 +77,7 @@ export default function FilterPanel({ filters, onFiltersChange, className }: Fil
         const updated = current.includes(mode)
             ? current.filter(m => m !== mode)
             : [...current, mode];
-        onFiltersChange({ ...filters, transportModes: updated });
+        onFiltersChange({ ...filters, transportModes: updated.length > 0 ? updated : undefined });
     };
 
     return (
@@ -293,7 +293,7 @@ export default function FilterPanel({ filters, onFiltersChange, className }: Fil
                 {activeFiltersCount > 0 && (
                     <button
                         onClick={() => {
-                            onFiltersChange({ 
+                            onFiltersChange({
                                 cityId: filters.cityId,
                                 categories: undefined,
                                 transportModes: undefined,

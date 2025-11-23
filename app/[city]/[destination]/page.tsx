@@ -1,41 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import ThemeToggle from '../../../components/ui/ThemeToggle';
-import GoogleMap from '../../../components/ui/GoogleMap';
-import { CITIES, CATEGORIES, TRANSPORT_MODES } from '../../../lib/constants';
-import { formatCurrency, formatDistance, formatDuration, cn } from '../../../lib/utils';
+import RouteMap from '../../../components/destination/RouteMap';
+import TransportModeSelector from '../../../components/destination/TransportModeSelector';
+import FareComparisonCard from '../../../components/destination/FareComparisonCard';
+import WeatherWidget from '../../../components/destination/WeatherWidget';
+import NearbyAttractionsCarousel from '../../../components/destination/NearbyAttractionsCarousel';
+import { CITIES, CATEGORIES } from '../../../lib/constants';
+import { formatDistance, formatDuration } from '../../../lib/utils';
+import type { DestinationResponse, TransportOption } from '../../../types/destination';
 
-interface DestinationDetail {
-    id: number;
-    name: string;
-    slug: string;
-    category: string;
-    shortSummary: string;
-    aiEnhancedSummary?: string;
-    bestMonths?: string;
-    imageUrl?: string;
-    latitude: number;
-    longitude: number;
-    distanceKm: number;
-    travelTimeMinutes: number;
-    estimatedCost: number;
-    transportMode: string;
-    destinationPhotos?: Array<{ photoUrl?: string }>;
-}
+const TRANSPORT_MODES = [
+    { value: 'driving', label: 'Driving', emoji: '🚗' },
+    { value: 'transit', label: 'Transit', emoji: '🚌' },
+];
 
 export default function DestinationPage() {
     const params = useParams();
-    const router = useRouter();
     const citySlug = params.city as string;
     const destinationSlug = params.destination as string;
-    
+
     const city = CITIES.find(c => c.slug === citySlug);
-    const [destination, setDestination] = useState<DestinationDetail | null>(null);
-    const [cityCoords, setCityCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [data, setData] = useState<DestinationResponse | null>(null);
+    const [selectedMode, setSelectedMode] = useState<string>('driving');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -56,19 +47,17 @@ export default function DestinationPage() {
                     }),
                 });
 
-            const data = await response.json();
+                const responseData = await response.json();
 
-            if (data.success) {
-                setDestination(data.destination);
-                if (data.city) {
-                    setCityCoords({
-                        latitude: Number(data.city.latitude),
-                        longitude: Number(data.city.longitude),
-                    });
+                if (responseData.success) {
+                    setData(responseData);
+                    // Set default mode to first available transport option
+                    if (responseData.transportOptions && responseData.transportOptions.length > 0) {
+                        setSelectedMode(responseData.transportOptions[0].mode);
+                    }
+                } else {
+                    setError(responseData.error || 'Destination not found');
                 }
-            } else {
-                setError(data.error || 'Destination not found');
-            }
             } catch (err) {
                 setError('Failed to load destination');
                 console.error('Destination error:', err);
@@ -110,7 +99,7 @@ export default function DestinationPage() {
         );
     }
 
-    if (error || !destination) {
+    if (error || !data || !data.destination) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-950">
                 <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
@@ -139,9 +128,15 @@ export default function DestinationPage() {
         );
     }
 
+    const { destination, transportOptions, nearbyAttractions } = data;
     const category = CATEGORIES.find(c => c.value === destination.category);
-    const transport = TRANSPORT_MODES.find(m => m.value === destination.transportMode);
     const primaryImage = destination.destinationPhotos?.[0]?.photoUrl || destination.imageUrl;
+
+    // Get current transport option
+    const currentTransport = transportOptions?.find(t => t.mode === selectedMode) || transportOptions?.[0];
+    const availableModes = TRANSPORT_MODES.filter(mode =>
+        transportOptions?.some(t => t.mode === mode.value)
+    );
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-950">
@@ -163,7 +158,7 @@ export default function DestinationPage() {
                 </div>
             </header>
 
-            {/* Hero Image */}
+            {/* Hero Image with Weather Widget */}
             <div className="relative h-[60vh] min-h-[400px] overflow-hidden">
                 {primaryImage ? (
                     <Image
@@ -172,39 +167,28 @@ export default function DestinationPage() {
                         fill
                         className="object-cover"
                         priority
-                        unoptimized={primaryImage.includes('unsplash.com')}
-                        onError={(e) => {
-                            // Fallback to emoji if image fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                                const fallback = parent.querySelector('.image-fallback');
-                                if (fallback) {
-                                    (fallback as HTMLElement).style.display = 'flex';
-                                }
-                            }
-                        }}
+                        unoptimized={primaryImage.includes('unsplash.com') || primaryImage.includes('googleapis.com')}
                     />
-                ) : null}
-                {(!primaryImage || primaryImage === '') && (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 dark:from-primary-900 to-accent-100 dark:to-accent-900 image-fallback">
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 dark:from-primary-900 to-accent-100 dark:to-accent-900">
                         <span className="text-9xl">{category?.emoji || '🏞️'}</span>
                     </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                
+
+                {/* Weather Widget Overlay */}
+                <WeatherWidget
+                    weatherInfo={destination.weatherInfo}
+                    airQuality={destination.airQuality}
+                    bestVisitTime={destination.bestVisitTime}
+                />
+
                 {/* Content Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-8 container-custom">
                     <div className="flex items-center gap-3 mb-4">
                         <span className="badge bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-foreground shadow-lg">
                             {category?.emoji} {category?.label}
                         </span>
-                        {destination.bestMonths && (
-                            <span className="badge bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-foreground shadow-lg">
-                                📅 Best: {destination.bestMonths}
-                            </span>
-                        )}
                     </div>
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-lg">
                         {destination.name}
@@ -225,6 +209,11 @@ export default function DestinationPage() {
                             </p>
                         </div>
 
+                        {/* Nearby Attractions */}
+                        {nearbyAttractions && nearbyAttractions.length > 0 && (
+                            <NearbyAttractionsCarousel attractions={nearbyAttractions} />
+                        )}
+
                         {/* Photos Gallery */}
                         {destination.destinationPhotos && destination.destinationPhotos.length > 1 && (
                             <div className="card p-8">
@@ -238,6 +227,7 @@ export default function DestinationPage() {
                                                     alt={`${destination.name} - Photo ${idx + 2}`}
                                                     fill
                                                     className="object-cover"
+                                                    unoptimized={photo.photoUrl.includes('googleapis.com')}
                                                 />
                                             </div>
                                         )
@@ -246,69 +236,75 @@ export default function DestinationPage() {
                             </div>
                         )}
 
-                        {/* Google Map */}
-                        {destination.latitude && destination.longitude && (
-                            <GoogleMap
+                        {/* Route Map */}
+                        {destination.latitude && destination.longitude && data.city && (
+                            <RouteMap
                                 latitude={destination.latitude}
                                 longitude={destination.longitude}
                                 destinationName={destination.name}
-                                cityName={city?.name}
-                                cityLatitude={cityCoords?.latitude}
-                                cityLongitude={cityCoords?.longitude}
+                                cityName={city.name}
+                                cityLatitude={Number(data.city.latitude)}
+                                cityLongitude={Number(data.city.longitude)}
+                                routePolyline={currentTransport?.routePolyline}
+                                majorWaypoints={currentTransport?.majorWaypoints as any}
                             />
                         )}
                     </div>
 
                     {/* Sidebar */}
                     <aside className="lg:col-span-1">
-                        <div className="card-glass sticky top-24 p-6 space-y-6">
-                            {/* Quick Stats */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4">Trip Details</h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">📍</span>
-                                            <div>
-                                                <div className="text-xs text-muted-foreground">Distance</div>
-                                                <div className="font-semibold">{formatDistance(destination.distanceKm)}</div>
+                        <div className="sticky top-24 space-y-6">
+                            {/* Transport Mode Selector */}
+                            {availableModes.length > 1 && (
+                                <TransportModeSelector
+                                    selectedMode={selectedMode}
+                                    onModeChange={setSelectedMode}
+                                    modes={availableModes}
+                                />
+                            )}
+
+                            {/* Trip Details */}
+                            {currentTransport && (
+                                <div className="card-glass p-6 space-y-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold mb-4">Trip Details</h3>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">📍</span>
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground">Distance</div>
+                                                        <div className="font-semibold">{formatDistance(currentTransport.distanceKm)}</div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">⏱️</span>
-                                            <div>
-                                                <div className="text-xs text-muted-foreground">Travel Time</div>
-                                                <div className="font-semibold">{formatDuration(destination.travelTimeMinutes)}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">{transport?.emoji || '🚗'}</span>
-                                            <div>
-                                                <div className="text-xs text-muted-foreground">Transport</div>
-                                                <div className="font-semibold capitalize">{destination.transportMode}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">💰</span>
-                                            <div>
-                                                <div className="text-xs text-muted-foreground">Estimated Cost</div>
-                                                <div className="font-semibold">{formatCurrency(destination.estimatedCost)}</div>
+                                            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">⏱️</span>
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground">Travel Time</div>
+                                                        <div className="font-semibold">{formatDuration(currentTransport.travelTimeMinutes)}</div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* Fare Comparison */}
+                            {currentTransport && (
+                                <FareComparisonCard
+                                    mode={selectedMode}
+                                    fareDetails={currentTransport.fareDetails}
+                                    bookingLinks={currentTransport.bookingLinks}
+                                />
+                            )}
 
                             {/* CTA */}
                             <Link
                                 href={`/${citySlug}`}
-                                className="w-full btn-primary text-center"
+                                className="w-full btn-primary text-center block"
                             >
                                 ← Back to Trips
                             </Link>
@@ -319,4 +315,3 @@ export default function DestinationPage() {
         </div>
     );
 }
-

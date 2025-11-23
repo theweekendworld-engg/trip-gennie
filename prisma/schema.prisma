@@ -199,8 +199,8 @@ model ApiCache {
 model DestinationPhoto {
   id             Int      @id @default(autoincrement())
   destinationId  Int      @map("destination_id")
-  photoReference String   @map("photo_reference") @db.VarChar(500)
-  photoUrl       String?  @map("photo_url") @db.VarChar(500)
+  photoReference String   @map("photo_reference") @db.Text
+  photoUrl       String?  @map("photo_url") @db.Text
   width          Int?
   height         Int?
   attribution    String?  @db.Text

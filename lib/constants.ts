@@ -10,11 +10,10 @@ export const CITIES = [
 ] as const;
 
 export const CATEGORIES = [
-    { value: 'hill', label: 'Hill Stations', emoji: '⛰️' },
-    { value: 'lake', label: 'Lakes', emoji: '🏞️' },
-    { value: 'waterfall', label: 'Waterfalls', emoji: '💧' },
-    { value: 'fort', label: 'Forts', emoji: '🏰' },
-    { value: 'temple', label: 'Temples', emoji: '🛕' },
+    { value: 'hill_station', label: 'Hill Stations', emoji: '⛰️' },
+    { value: 'nature', label: 'Lakes & Waterfalls', emoji: '🏞️' },
+    { value: 'historical', label: 'Forts & Heritage', emoji: '🏰' },
+    { value: 'spiritual', label: 'Temples', emoji: '🛕' },
     { value: 'adventure', label: 'Adventure', emoji: '🏕️' },
     { value: 'beach', label: 'Beaches', emoji: '🏖️' },
     { value: 'wildlife', label: 'Wildlife', emoji: '🦁' },
