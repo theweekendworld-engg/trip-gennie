@@ -3,7 +3,7 @@ import { getCityBySlug } from '../../../lib/cities';
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}` 
-    : 'https://tripgenie.com';
+    : 'https://tripgennie.com';
 
 export async function generateDestinationMetadata(
     citySlug: string,
@@ -53,10 +53,10 @@ export async function generateDestinationMetadata(
             `${destination.name} ${cityName} distance`,
         ],
         openGraph: {
-            title: `${destination.name} - Weekend Trip from ${cityName} | TripGenie`,
+            title: `${destination.name} - Weekend Trip from ${cityName} | TripGennie`,
             description: `${summary.substring(0, 160)}...`,
             url: `${baseUrl}/${citySlug}/${destinationSlug}`,
-            siteName: 'TripGenie',
+            siteName: 'TripGennie',
             locale: 'en_IN',
             type: 'article',
             images: destination.imageUrl ? [
@@ -78,7 +78,7 @@ export async function generateDestinationMetadata(
             canonical: `${baseUrl}/${citySlug}/${destinationSlug}`,
         },
         other: {
-            'article:author': 'TripGenie',
+            'article:author': 'TripGennie',
             'article:section': categoryLabel,
         },
     };

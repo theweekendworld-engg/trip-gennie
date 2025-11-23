@@ -168,7 +168,7 @@ export default function CityPage() {
                     <div className="flex items-center justify-between">
                         <a href="/" className="flex items-center gap-2">
                             <span className="text-2xl">✨</span>
-                            <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
+                            <span className="font-display font-bold text-xl text-foreground">TripGennie</span>
                         </a>
                         <div className="flex items-center gap-4">
                             <div className="w-96">

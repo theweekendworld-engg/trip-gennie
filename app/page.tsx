@@ -129,9 +129,22 @@ export default function HomePage() {
                                     <span className="text-2xl">✨</span>
                                     <span className="font-display font-bold text-lg text-foreground">TripGennie</span>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    © 2025 TripGennie. Discover your next adventure.
-                                </p>
+                                <div className="flex flex-col md:flex-row items-center gap-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        © 2025 TripGennie. Discover your next adventure.
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Made with <span className="text-red-500">❤️</span> by{' '}
+                                        <a
+                                            href="https://theweekendworld.com"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors underline decoration-2 underline-offset-2"
+                                        >
+                                            TheWeekendWorld
+                                        </a>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </footer>

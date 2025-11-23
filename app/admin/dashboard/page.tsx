@@ -118,7 +118,7 @@ export default function AdminDashboard() {
                         Welcome back, {session?.user?.name || session?.user?.email || 'Admin'}!
                     </h2>
                     <p className="text-gray-600 dark:text-gray-400">
-                        Here's what's happening with TripGenie today.
+                        Here's what's happening with TripGennie today.
                     </p>
                 </div>
 

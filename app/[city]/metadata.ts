@@ -35,16 +35,16 @@ export async function generateCityMetadata(citySlug: string): Promise<Metadata> 
             'budget travel',
         ],
         openGraph: {
-            title: `Weekend Trips from ${city.name} | TripGenie`,
+            title: `Weekend Trips from ${city.name} | TripGennie`,
             description: `Discover amazing weekend getaways from ${city.name}. Filter by budget, time, and interests.`,
             url: `${baseUrl}/${citySlug}`,
-            siteName: 'TripGenie',
+            siteName: 'TripGennie',
             locale: 'en_IN',
             type: 'website',
         },
         twitter: {
             card: 'summary_large_image',
-            title: `Weekend Trips from ${city.name} | TripGenie`,
+            title: `Weekend Trips from ${city.name} | TripGennie`,
             description: `Discover amazing weekend getaways from ${city.name}.`,
         },
         alternates: {

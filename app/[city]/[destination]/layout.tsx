@@ -15,14 +15,14 @@ export async function generateMetadata({
         
         if (!citySlug || !destinationSlug) {
             return {
-                title: 'Destination Not Found | TripGenie',
+                title: 'Destination Not Found | TripGennie',
             };
         }
         
         const city = await getCityBySlug(citySlug);
         if (!city) {
             return {
-                title: 'Destination Not Found | TripGenie',
+                title: 'Destination Not Found | TripGennie',
             };
         }
 
@@ -41,7 +41,7 @@ export async function generateMetadata({
 
         if (!cityDestination) {
             return {
-                title: 'Destination Not Found | TripGenie',
+                title: 'Destination Not Found | TripGennie',
             };
         }
 
@@ -62,7 +62,7 @@ export async function generateMetadata({
     } catch (error) {
         console.error('Error generating destination metadata:', error);
         return {
-            title: 'Destination | TripGenie',
+            title: 'Destination | TripGennie',
         };
     }
 }

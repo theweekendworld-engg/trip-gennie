@@ -188,7 +188,7 @@ export default function DestinationPage() {
                         <div className="flex items-center justify-between">
                             <Link href={`/${citySlug}`} className="flex items-center gap-2">
                                 <span className="text-2xl">✨</span>
-                                <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
+                                <span className="font-display font-bold text-xl text-foreground">TripGennie</span>
                             </Link>
                             <ThemeToggle />
                         </div>
@@ -227,7 +227,7 @@ export default function DestinationPage() {
                     <div className="flex items-center justify-between">
                         <Link href={`/${citySlug}`} className="flex items-center gap-2">
                             <span className="text-2xl">✨</span>
-                            <span className="font-display font-bold text-xl text-foreground">TripGenie</span>
+                            <span className="font-display font-bold text-xl text-foreground">TripGennie</span>
                         </Link>
                         <div className="flex items-center gap-4">
                             <div className="text-right">
