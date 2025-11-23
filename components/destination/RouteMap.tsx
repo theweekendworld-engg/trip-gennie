@@ -31,25 +31,19 @@ export default function RouteMap({
     const mapInstanceRef = useRef<any>(null);
     const [mapLoaded, setMapLoaded] = useState(false);
     const [mapError, setMapError] = useState(false);
-    const [apiKey, setApiKey] = useState<string | null>(null);
     const markersRef = useRef<any[]>([]);
     const polylineRef = useRef<any>(null);
 
-    // Fetch API key from server
+    // Get API key from environment variable (frontend key with HTTP referrer restrictions)
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_KEY;
+
+    // Check if API key is available
     useEffect(() => {
-        fetch('/api/maps-key')
-            .then(res => res.json())
-            .then(data => {
-                if (data.apiKey) {
-                    setApiKey(data.apiKey);
-                } else {
-                    setMapError(true);
-                }
-            })
-            .catch(() => {
-                setMapError(true);
-            });
-    }, []);
+        if (!apiKey) {
+            console.error('NEXT_PUBLIC_GOOGLE_MAP_KEY is not set');
+            setMapError(true);
+        }
+    }, [apiKey]);
 
     useEffect(() => {
         if (!mapRef.current || mapLoaded || !apiKey) return;

@@ -40,8 +40,17 @@ A modern, SEO-optimized platform for discovering 1-day and 2-day trips from majo
    Create `.env.local` file:
    ```env
    DATABASE_URL="postgresql://user:password@localhost:5432/tripgenie"
-   GOOGLE_MAPS_API_KEY="your_api_key_here"
+   
+   # Google Maps API Keys
+   # Frontend key (with HTTP referrer restrictions) - exposed to browser
+   NEXT_PUBLIC_GOOGLE_MAP_KEY="your_frontend_key_here"
+   # Backend key (without HTTP referrer restrictions) - server-side only
+   GOOGLE_MAPS_API_KEY="your_backend_key_here"
    ```
+   
+   **Important**: 
+   - Frontend key (`NEXT_PUBLIC_GOOGLE_MAP_KEY`) should have HTTP referrer restrictions in Google Cloud Console
+   - Backend key (`GOOGLE_MAPS_API_KEY`) should have no HTTP referrer restrictions (or IP restrictions if available)
 
 4. **Set up the database**
    ```bash
